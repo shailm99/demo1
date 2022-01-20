@@ -1,0 +1,209 @@
+---
+title: "Introduction to GGPlot"
+author: "Shail Mirpuri (704904548)"
+date: "1/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview 
+
+Aims of the Workshop:
+
+* To understand how to create a useful and informative data visualization 
+* To learn how to use GGPlot2 in R to create these visualizations
+* To be able to create your data visualizations from Sports datasets of your choice
+
+Pre-requisites (encouraged but do not worry if do not have it, feel free to ask questions if you're confused):
+
+* Basic understanding of R (If you came to the Introduction to R workshop last quarter you will definitely be fine). 
+
+## What is GGPlot? 
+
+As we introduced last quarter, in R there is a series of packages created by Hadley Wickham which allows for easy data processing, manipulation, analysis and visualization. Last quarter we covered the dpylr package to perform exploratory data analysis. 
+
+Today, we will look at the package dedicated to data visualizations called ggplot2. 
+ggplot2 is one of the most commonly used packages for data visualizations in R and it allows you to easily create high quality graphics. 
+
+Before we dive into the specifics of creating a visualization with ggplot2, let's first take a look at the reasons behind why we create data visualizations. 
+
+### Purpose of Data Visualizations 
+
+There are two main types of data visualizations: internal and external.
+
+#### Internal Visualizations 
+* These are used for your own exploration of data; for example to understand the distribution of a variable. 
+* Often with large amounts of data it can be very hard to understand different trends, patterns and insights by just looking at the table 
+* Internal visualizations allow you to view this data and find potential interesting observations, trends or outliers that you can dive further into
+* Since Internal Visualizations are meant for ‘you’ as the data analyst, less time is spent on the actual presentation side of these visuals 
+
+
+#### External Visualizations
+
+* These are used as explanatory tools to help explain your findings to your audience. 
+* With these, it is extremely important that they clearly communicate the point you’re trying to make with the accompanying analysis 
+- These visualizations need to be clearly labelled, titled, cited, etc. since they will be presented to the public
+
+External Visualizations need to do two main things:
+1. Map properties of the data into a graphic
+2. Allow to viewer of the graphic to be able to map the data back in their brain.
+
+With this introduction on the principles behind each data visualization, we will now move on to introducing the key terminology linked with ggplot2. 
+
+## Key Terminology
+
+There are certain arguments to functions in ggplot that require an understanding of terminology. Here are some key terms you can refer back to. 
+
+- 'data': refers to the dataframe where variables are columns 
+- 'geoms': these are geometric objects that are drawn to represent the data (e.g. bars, lines, points, etc)
+- 'aesthetics': these are the visual properties of the geometric object (e.g. color, x, y, etc.)
+
+## Creating a basic graphic
+```{r}
+# step 0: install package if you have not already done so
+# install.packages('tidyverse')
+
+# step 1: load the data and package
+
+library(ggplot2)
+
+ufc <- read.csv('ufc-master.csv')
+head(ufc)
+
+colnames(ufc) # we have ALOT of features to work with
+
+# create a figure
+ggplot(data = ufc, aes(x = height_dif, y = reach_dif)) # notice how nothing is drawn yet 
+
+
+# this is because we need choose how we want to represent the data
+ggplot(data = ufc, aes(x = height_dif, y = reach_dif)) + geom_point()
+
+```
+
+From the graph above we can identify two things:
+1. That we have some outliers in our dataset which we will need to explore further
+2. There seems to be a positive correlation between height difference and reach difference which could make sense intuitively (taller fighters may be more likely to have greater reach as well)
+
+
+## Aes vs. Settings
+As mentioned in the key terminology section, aesthetics (represented by aes) determines the visual properties of our geometric objects. Essentially, aesthetics allow us to specify which properties of the data we want to map towards which visual features. 
+
+For instance, we could split our graph above by weight class using the color aesthetic. 
+
+```{r}
+ggplot(data = ufc, aes(x = height_dif, y = reach_dif, color = weight_class)) + geom_point()
+```
+
+Alternatively instead of color, we could use the shape of the points instead to differentiate between the weight class of a fight. 
+
+```{r}
+ggplot(data = ufc[ufc$gender == 'FEMALE', ], aes(x = height_dif, y = reach_dif, shape = weight_class)) + geom_point()
+
+ggplot(data = ufc[ufc$gender == 'FEMALE', ], aes(x = height_dif, y = reach_dif, color = weight_class)) + geom_point()
+```
+You can combine these to split on multiple categorical variables.  
+
+Visually, we tend to pick up color first before the shape of the group so the more important categorical variable should get the color attribute. 
+
+You can also visually represent numerical values using color and it will produce a gradient based representation of the color. 
+
+```{r}
+ggplot(data = ufc, aes(x = height_dif, y = reach_dif, color = total_fight_time_secs)) + geom_point()
+```
+
+On the other hand, 'settings' allow to apply a property to all your data (e.g. if you want to change the default colors of all points) rather than taking a property of the data and splitting is aesthetically.
+
+```{r}
+# changing the scale 
+ggplot(data = ufc, aes(x = height_dif, y = reach_dif)) + geom_point() + scale_x_continuous(limits = c(-25, 25)) + scale_y_continuous(limits = c(-25, 25))
+
+
+# you can also save your plots into an object and print them later
+
+plot1 <- ggplot(data = ufc, aes(x = height_dif, y = reach_dif)) + geom_point() + scale_x_continuous(limits = c(-25, 25)) + scale_y_continuous(limits = c(-25, 25))
+
+print(plot1) # you need to print it for it to be displayed on your graphing window
+```
+
+## Types of Graphs You Can Create with GGPlot
+
+There are several graphs you can create using ggplot2. Here are some examples
+
+### Bar Graphs 
+```{r}
+ggplot(data = ufc[ufc$gender == 'FEMALE',], aes(x = weight_class)) + geom_bar() + ggtitle('The Number of Female Fights in the UFC By Weight Class')
+
+```
+
+### Line Graph 
+
+```{r}
+library(lubridate) # package for dealing with dates
+library(tidyverse)
+ufc_years <- year(ymd(ufc$date))
+ufc_years[is.na(ufc_years)] <- year(mdy(ufc$date[is.na(ufc_years)]))
+ufc$year <- ufc_years
+
+ufc_year_df <- ufc %>% group_by(year) %>% summarise(avg_time = mean(total_fight_time_secs, na.rm = TRUE))
+ggplot(data = ufc_year_df, aes(x = year, y = avg_time)) + geom_line() + geom_point() + ggtitle("Average Time of Fight In Seconds Between 2010 and 2021") + xlab("Year") + ylab("Average Time Per Fight In Seconds")
+```
+
+From the graph above, we can that fights intially became slightly shorter but after 2013 they have gotten averagely longer over time. This may suggest that fighters are taking a more measured approach and assessing their opponents rather than being reckless and aggressive in the fight. 
+
+### Multi-Line Graphs
+We can convert the graph above into a multiple line graph to capture the different trends in the Male and Female Fights
+
+```{r}
+ufc_year_df <- ufc %>% group_by(year, gender) %>% summarise(avg_time = mean(total_fight_time_secs, na.rm = TRUE))
+ggplot(data = ufc_year_df, aes(x = year, y = avg_time, color = gender)) + geom_line() + geom_point() + ggtitle("Average Time of Fight In Seconds Between 2010 and 2021") + xlab("Year") + ylab("Average Time Per Fight In Seconds")
+
+```
+This add-on allows to generate more insight into the evolution of the length of a UFC fight. We can see that female fight lengths seem to be on the down but as a whole tend to be longer on average than male fights. 
+
+```{r}
+ufc_year_df <- ufc %>% filter(gender == 'MALE', weight_class %in% c("Heavyweight", "Welterweight", "Flyweight") ) %>%  group_by(year, weight_class) %>% summarise(avg_time = mean(total_fight_time_secs, na.rm = TRUE))
+ggplot(data = ufc_year_df, aes(x = year, y = avg_time, color = weight_class)) + geom_line() + geom_point() + ggtitle("Average Time of Fight In Seconds Between 2010 and 2021") + xlab("Year") + ylab("Average Time Per Fight In Seconds")
+unique(ufc$weight_class)
+```
+We can see that historically Heavyweight fights tend to be shorter than Welterweight and Flyweight fights. This makes sense because traditionally heavyweights tend to have greater knockout power, which may lead to shorter fights than other weight classes. However, in recent times these fights seem to be similar in terms of average length. This may suggest that heavyweight fighters are taking a more conservative approach maybe because of the fear of getting knocked out. On the other hand, flyweight/welterweight fighters seem to be taking a more aggressive stance to fights which is reflected by decreasing average time per fight.   
+
+### Plotting information from multiple dataframes 
+
+Besides plotting information from one data-frame, we can also easily plot information from multiple dataframes in ggplot2. 
+
+```{r}
+df1 <- data.frame(x = 1:10, y = 1:10)
+df2 <- data.frame(x = 1:10, y = seq(1,5.5, 0.5))
+
+plot1 <- ggplot(data = df1, aes(x = x, y = y)) + geom_line()
+print(plot1)
+
+plot2 <- plot1 + geom_line(aes(x = x, y = y), data = df2) #adding the data from the second df
+print(plot2)
+```
+
+### Many others 
+
+There are several other cool graphics you can make using ggplot. Refering the documentation and the additional resources provided below is the best way to explore these other options:
+
+* [Top 50 ggplot visualizations with starter code](http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html)
+* [Cool ggplot themes](https://towardsdatascience.com/themes-to-spice-up-visualizations-with-ggplot2-3e275038dafa)
+* [An indepth ggplot2 guide](http://www.sthda.com/english/wiki/be-awesome-in-ggplot2-a-practical-guide-to-be-highly-effective-r-software-and-data-visualization)
+* [Another ggplot2 guide](https://datacarpentry.org/R-ecology-lesson/04-visualization-ggplot2.html)
+
+
+## Activity 
+
+Now that we have gone through this tutorial, one way to practice using ggplot2 is to pick a sports dataset of your choice (from Kaggle or any other website) and produce three visualizations:
+1. A Bar Graph
+2. A Multiple Colored Line Graph
+3. Optional: A different type of visualization we have not discussed in this tutorial (i.e. look at the documentation and see what you can create)
+
+
+
+
+
